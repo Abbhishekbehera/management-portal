@@ -7,6 +7,7 @@ import '../models/student.js'
 import '../models/teacher.js'
 import '../models/classroom.js'
 import '../models/subject.js'
+import '../models/attendance.js'
 //Environmental Variable
 dotenv.config()
 //Mongo URL Connection
