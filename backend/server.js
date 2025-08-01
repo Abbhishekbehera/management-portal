@@ -6,12 +6,16 @@ import connectDb from './config/db.js'
 
 //Environmental Variable
 dotenv.config()
+
 //Database connection
 connectDb()
+
 //Initialise app to express
 const app = express()
+
 //Defining PORT
 const port = process.env.PORT
+
 //Middlewares
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
