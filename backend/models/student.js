@@ -1,11 +1,12 @@
 import mongoose from "mongoose";
 
+
 const studentSchema = new mongoose.Schema({
     user: { type: mongoose.Schema.Types.ObjectId, ref: "user" },
-    rollNo: String,
-    section: { type: mongoose.Schema.Types.ObjectId, ref: "classroom" },
+    rollNo: { type: String, required: true, unique: true },
+    className: { type: mongoose.Schema.Types.ObjectId, ref: "classroom" },
     dob: String,
-    guardianName: String,
+    guardianName: { type: String, required: true, unique: true },
     address: String
 })
 

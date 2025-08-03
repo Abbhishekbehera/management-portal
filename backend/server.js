@@ -3,6 +3,7 @@ import express from 'express'
 import dotenv from 'dotenv'
 import connectDb from './config/db.js'
 import authRouter from './routes/auth.js'
+import adminRouter from './routes/admin.js'
 
 
 //Environmental Variable
@@ -20,7 +21,8 @@ const port = process.env.PORT
 //Middlewares
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
-app.use('/api/auth',authRouter)
+app.use('/api/auth', authRouter)
+app.use('/api/admin', adminRouter)
 
 
 //Server listen
