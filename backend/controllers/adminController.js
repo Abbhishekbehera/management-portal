@@ -7,7 +7,7 @@ import classroom from '../models/classroom.js'
 
 // Create Student Credentials
 export const createStudent = async (req, res) => {
-    const { name, email, password, rollNo, className, dob, guardianName, address } = req.body;
+    const { name, email, password, rollNo, className, dob, guardianName,     } = req.body;
 
     try {
         const studentExists = await user.findOne({ email });
@@ -171,7 +171,7 @@ export const deleteStudent = async (req, res) => {
             { $pull: { student: delStudent._id } },
             { new: true }
         );
-        await user.findByIdAndDelete(delStudent.user)
+        await user.findByIdAndDelete(delStudent.user)   
         await student.findByIdAndDelete(req.params.id)
 
         return res.status(202).json({ data: 'Deleted particular student profile successfully.', delStudent })
@@ -183,3 +183,5 @@ export const deleteStudent = async (req, res) => {
         })
     }
 }
+
+//Upload Student Details in Excel

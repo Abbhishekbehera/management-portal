@@ -12,7 +12,7 @@ const secret_key = process.env.SECRET
 //Register Controller
 export const register = async (req, res) => {
     console.log(req.body)
-    const { name, email, password, role } = req.body
+    const { name, email, password, school, role } = req.body
     const existingEmail = await user.findOne({ email })
     try {
         if (existingEmail) {
@@ -23,6 +23,7 @@ export const register = async (req, res) => {
             name,
             email,
             password: hashPassword,
+            school,
             role
         })
         await newUser.save()
