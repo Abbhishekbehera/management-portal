@@ -5,7 +5,7 @@ import dotenv from "dotenv"
 import '../models/user.js'
 import '../models/student.js'
 import '../models/classroom.js'
-import '../models/subject.js'
+import '../models/homework.js'
 import '../models/attendance.js'
 //Environmental Variable
 dotenv.config()

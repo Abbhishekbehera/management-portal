@@ -1,19 +1,37 @@
 import express from 'express'
-//Student Profile Controllers
-import { createStudent,getStudents,studentInfo,updateStudent,deleteStudent } from '../controllers/adminController.js'
+//Student, Teacher and Classroom Management Controllers
+import {
+    createStudent, getStudents, studentInfo, updateStudent, deleteStudent, createClassroom,
+    getAllClassroom, getClassroomById, createTeacher, viewAllTeacher, viewTeacherById, updateTeacherById
+} from '../controllers/adminController.js'
 
 const adminRouter = express.Router()
+//Teacher Management
+adminRouter.post('/teachers', createTeacher)
 
-//Creating Student Profile
-adminRouter.post('/students',createStudent)
-//Get all Student Information
-adminRouter.get('/students',getStudents)
-//Get individual student information
-adminRouter.get('/students/:id',studentInfo)
-//Update individual student profile
-adminRouter.put('/students/:id',updateStudent)
-//Delete individual student profile
-adminRouter.delete('/students/:id',deleteStudent)
+adminRouter.get('/teachers', viewAllTeacher)
+
+adminRouter.get('/teachers/:id', viewTeacherById)
+
+adminRouter.put('/teachers/:id', updateTeacherById)
+
+//ClassRoom Management
+adminRouter.post('/classrooms', createClassroom)
+
+adminRouter.get('/classrooms', getAllClassroom)
+
+adminRouter.get('/classrooms/:id', getClassroomById)
+
+//Student Management
+adminRouter.post('/students', createStudent)
+
+adminRouter.get('/students', getStudents)
+
+adminRouter.get('/students/:id', studentInfo)
+
+adminRouter.put('/students/:id', updateStudent)
+
+adminRouter.delete('/students/:id', deleteStudent)
 
 
 export default adminRouter
