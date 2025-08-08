@@ -1,7 +1,7 @@
 import express from 'express'
 //Student, Teacher and Classroom Management Controllers
 import {
-    createStudent, getStudents, studentInfo, updateStudent, deleteStudent, createClassroom,
+    createStudent, getAllStudents, getStudentById, updateStudent, deleteStudent, createClassroom,
     getAllClassroom, getClassroomById, createTeacher, viewAllTeacher, viewTeacherById, updateTeacherById
 } from '../controllers/adminController.js'
 
@@ -25,9 +25,9 @@ adminRouter.get('/classrooms/:id', getClassroomById)
 //Student Management
 adminRouter.post('/students', createStudent)
 
-adminRouter.get('/students', getStudents)
+adminRouter.get('/students', getAllStudents)
 
-adminRouter.get('/students/:id', studentInfo)
+adminRouter.get('/students/:id', getStudentById)
 
 adminRouter.put('/students/:id', updateStudent)
 

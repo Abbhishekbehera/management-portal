@@ -100,7 +100,7 @@ export const createClassroom = async (req, res) => {
         if (!standard || !section) {
             return res.status(400).json({ data: 'Standard and Section are required.' })
         }
-        
+
         if (classTeacher && !mongoose.Types.ObjectId.isValid(classTeacher)) {
             return res.status(400).json({ data: 'Invalid classTeacher ID.' })
         }
@@ -172,18 +172,31 @@ export const getClassroomById = async (req, res) => {
     }
     catch (e) {
         console.log(e.message)
-        return res.status().json({ data: 'Server is down while getting classroom.', e: e.message })
+        return res.status(500).json({ data: 'Server is down while getting classroom.', e: e.message })
     }
 }
 
 // Create Student Credentials
 export const createStudent = async (req, res) => {
-    const { name, email, password, phoneNumber, rollNo, standard, section, dob, guardianName, address } = req.body;
-
     try {
-        const studentExists = await user.findOne({ email });
-        if (studentExists) {
-            return res.status(400).json({ data: 'Student Profile already exists.' });
+        const { name, email, password, phoneNumber, rollNo, classId, dob, guardianName, address } = req.body
+        if (!name || !email || !password || !phoneNumber || !rollNo || !classId || !dob || !guardianName || !address) {
+            return res.status(400).json({ data: 'All fields are required.' })
+        }
+
+        const existingClassroom = await classroom.findById(classId);
+        if (!existingClassroom) {
+            return res.status(404).json({ data: 'Classroom not found.' })
+        }
+
+        const existingUser = await user.findOne({ $or: [{ email }, { phoneNumber }] })
+        if (existingUser) {
+            return res.status(400).json({ data: 'User already exists.' })
+        }
+
+        const existingRoll = await student.findOne({ rollNo })
+        if (existingRoll) {
+            return res.status(400).json({ message: "Roll number already exists" })
         }
 
         const hashed = await bcrypt.hash(password, 10);
@@ -196,68 +209,52 @@ export const createStudent = async (req, res) => {
             role: 'student'
         });
 
-        let existingClass = await classroom.findOne({ classId });
-
-        if (!existingClass) {
-            existingClass = await classroom.create({
-                className,
-            });
-        }
-
-        const newStudent = await student.create({
-            user: newUser._id,
+        const newStudent = await new student({
+            principal: req.user?.id || null,
+            student: newUser._id,
             rollNo,
-            className: existingClass._id,
+            standard: existingClassroom.standard,
+            section: existingClassroom.section,
             dob,
             guardianName,
             address
-        });
-
-        //Push student into classroom's student array
-        await classroom.findByIdAndUpdate(
-            existingClass._id,
-            { $push: { student: newStudent._id } },
-            { new: true }
-        );
-
+        })
+        await newStudent.save()
+        console.log(newStudent)
         res.status(201).json({
-            data: 'Student Profile created successfully.',
-            newUser,
-            newStudent,
-            classAssigned: existingClass.className
-        });
+            data: 'Student Profile created successfully.', newUser, newStudent,
+        })
     }
     catch (e) {
-        console.log("Error:", e.message);
+        console.log(e.message)
         return res.status(500).json({
-            e: 'Cannot create student profile as server is down.',
-            message: e.message
-        });
-    }
-};
-
-//View All Student Information
-export const getStudents = async (req, res) => {
-    try {
-        const students = await student.find().populate('user', 'name email').populate('className', 'className')
-        console.log(students)
-        return res.status(200).json({ data: 'Fetched all the student information', info: students })
-    }
-    catch (e) {
-        console.log("Error:", e.message)
-        return res.status(500).json({ e: 'Cannot fetch student information.', e: e.message })
+            data: 'Cannot create student profile as server is down.', e: e.message
+        })
     }
 }
 
-//View Specific Student
-export const studentInfo = async (req, res) => {
+//View All Student Information
+export const getAllStudents = async (req, res) => {
     try {
-        const studentProfile = await student.findById(req.params.id).populate('user', 'name email').populate('className', 'className')
+        const getStudents = await student.find().populate('student', '-password')
+        console.log(getStudents)
+        return res.status(200).json({ data: 'Fetched all the student information', getStudents })
+    }
+    catch (e) {
+        console.log(e.message)
+        return res.status(500).json({ data: 'Cannot fetch all student information.', e: e.message })
+    }
+}
+
+//View Student by ID
+export const getStudentById = async (req, res) => {
+    try {
+        const studentProfile = await student.findById(req.params.id).populate('student', '-password')
         console.log(studentProfile)
         if (!studentProfile) {
             return res.status(404).json({ data: "This student does not exist" })
         }
-        res.status(200).json({ data: studentProfile })
+        res.status(200).json({ data: 'Fetched particular student information successfully.', studentProfile })
     }
     catch (e) {
         console.log(e.message)
@@ -267,69 +264,37 @@ export const studentInfo = async (req, res) => {
 
 //Update Specific Student Details
 export const updateStudent = async (req, res) => {
-    const { name, email, password, rollNo, className, dob, guardianName, address } = req.body;
     try {
-        const existingStudent = await student.findById(req.params.id);
-        if (!existingStudent) {
-            return res.status(404).json({ data: 'Student not found.' });
-        }
-        const existingUser = await user.findById(existingStudent.user);
-        if (!existingUser) {
-            return res.status(404).json({ message: 'User not found.' });
-        }
-        // Update User Details
-        if (name) existingUser.name = name;
-        if (email) existingUser.email = email;
-        if (password) {
-            const hashedPass = await bcrypt.hash(password, 10);
-            existingUser.password = hashedPass;
-        }
-        await existingUser.save();
+        const { rollNo, classId, dob, guardianName, address } = req.body
 
-        let newClass = existingStudent.className;
-        if (className) {
-            const classExists = await classroom.findOne({ className });
-            if (!classExists) {
-                newClass = (await classroom.create({ className }))._id;
+        const updateStudent = await student.findById(req.params.id)
+        if (!updateStudent) {
+            return res.status(404).json({ data: "Student not found." })
+        }
+
+        if (classId) {
+            const classroom = await classroom.findById(classId)
+            if (!classroom) {
+                return res.status(404).json({ message: "Classroom not found." })
             }
-            else {
-                newClass = classExists._id;
-            }
-
-            //Remove from old class, push into new class
-            await classroom.updateOne(
-                { _id: existingStudent.className },
-                { $pull: { student: existingStudent._id } }
-            );
-            await classroom.updateOne(
-                { _id: newClass },
-                { $addToSet: { student: existingStudent._id } }
-            );
+            updateStudent.classId = classId
+            updateStudent.standard = classroom.standard
+            updateStudent.section = classroom.section
         }
 
-        // Update Student details
-        existingStudent.rollNo = rollNo ?? existingStudent.rollNo; //If rollNo is given take it,Otherwise use the existing rollNo
-        existingStudent.className = newClass;
-        existingStudent.dob = dob ?? existingStudent.dob;
-        existingStudent.guardianName = guardianName ?? existingStudent.guardianName;
-        existingStudent.address = address ?? existingStudent.address;
+        if (rollNo) updateStudent.rollNo = rollNo
+        if (dob) updateStudent.dob = dob
+        if (guardianName) updateStudent.guardianName = guardianName
+        if (address) updateStudent.address = address
 
-        await existingStudent.save();
-
-        console.log(existingStudent)
-        res.status(200).json({
-            data: 'Student profile details updated successfully.',
-            student: existingStudent
-        });
-
-    } catch (e) {
-        console.log("Update Error:", e.message);
-        return res.status(500).json({
-            data: 'Server error during update.',
-            e: e.message
-        });
+        await updateStudent.save()
+        console.log(updateStudent)
+        res.json({ data: "Student updated successfully", updateStudent })
     }
-};
+    catch (e) {
+        res.status(500).json({ data: 'Server down while updating the student profile', e: error.message })
+    }
+}
 
 //Delete Specific Student Details
 export const deleteStudent = async (req, res) => {
@@ -338,13 +303,8 @@ export const deleteStudent = async (req, res) => {
         if (!delStudent) {
             return res.status(404).json({ data: 'Student not found' })
         }
-        await classroom.findByIdAndUpdate(
-            delStudent.className,
-            { $pull: { student: delStudent._id } },
-            { new: true }
-        );
-        await user.findByIdAndDelete(delStudent.user)
-        await student.findByIdAndDelete(req.params.id)
+        await user.findByIdAndDelete(delStudent.student);
+        await student.deleteOne();
 
         return res.status(202).json({ data: 'Deleted particular student profile successfully.', delStudent })
     }
