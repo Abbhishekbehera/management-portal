@@ -67,16 +67,18 @@ export const viewTeacherById = async (req, res) => {
     }
 }
 
-//Update Teacher by ID
+//Update Teacher by ID => 
 export const updateTeacherById = async (req, res) => {
     try {
-        const updates = req.body
-        delete updates.role //Dont change the role
-        delete updates.password //Dont change the password
+        const { email, phoneNumber } = req.body
 
-        const updateTeacher = await user.findOneAndUpdate(
-            { _id: req.params.id, role: "teacher" },
-            updates,
+        let updateData = {}
+        if (email) updateData.email = email
+        if (phoneNumber) updateData.phoneNumber = phoneNumber
+
+        const updateTeacher = await user.findByIdAndUpdate(
+            req.params.id,
+            { $set: updateData },
             { new: true }
         ).select("-password") //select("-password") deselective password
 
@@ -104,7 +106,7 @@ export const createClassroom = async (req, res) => {
         if (classTeacher && !mongoose.Types.ObjectId.isValid(classTeacher)) {
             return res.status(400).json({ data: 'Invalid classTeacher ID.' })
         }
-
+        let subjectData = subject
         if (subject && typeof subject === "object") {
             for (const [key, value] of Object.entries(subject)) {
                 if (!value.subjectname || !value.teacher) {
@@ -113,14 +115,16 @@ export const createClassroom = async (req, res) => {
                 if (!mongoose.Types.ObjectId.isValid(value.teacher)) {
                     return res.status(400).json({ data: `Invalid teacher ID for subject '${key}'.` })
                 }
+                value.teacher = new mongoose.Types.ObjectId(value.teacher)
             }
+            subjectData = subject
         }
 
         const newClassroom = new classroom({
             standard,
             section,
             classTeacher,
-            subject
+            subject: subjectData
         })
 
         await newClassroom.save()
@@ -136,45 +140,69 @@ export const createClassroom = async (req, res) => {
 //Get Classroom
 export const getAllClassroom = async (req, res) => {
     try {
-        const GetClass = await classroom.find().populate('classTeacher', 'name email').populate({
-            path: "subject",
-            populate: {
-                path: "teacher",
-                model: "user",
-                select: "name email"
+        let classes = await classroom.find()
+            .populate('classTeacher', 'name email')
+            .lean();
+
+        for (let cls of classes) {
+            for (let [key, subj] of Object.entries(cls.subject || {})) {
+                if (subj.teacher) {
+                    const teacher = await user.findById(subj.teacher)
+                        .select("name email")
+                        .lean();
+                    subj.teacher = teacher;
+                }
             }
-        })
-        console.log(GetClass)
-        return res.status(200).json({ data: 'Classroom fetched Succcessfully.', GetClass })
+        }
+
+        return res.status(200).json({
+            data: 'Classroom fetched successfully.',
+            GetClass: classes
+        });
+
+    } catch (e) {
+        console.error(e.message);
+        return res.status(500).json({
+            data: 'Server is down while getting classroom.',
+            e: e.message
+        });
     }
-    catch (e) {
-        console.log(e.message)
-        return res.status(500).json({ data: 'Server is down while getting classroom.', e: e.message })
-    }
-}
+};
 
 //Get Classroom by ID
 export const getClassroomById = async (req, res) => {
     try {
-        const GetClassById = await classroom.findById(req.params.id).populate('classTeacher', 'name email').populate({
-            path: "subject",
-            populate: {
-                path: "teacher",
-                model: "user",
-                select: "name email"
-            }
-        })
-        if (!GetClassById) {
-            return res.status(404).json({ data: 'This classroom is not found.' })
+        let classroomData = await classroom.findById(req.params.id)
+            .populate('classTeacher', 'name email')
+            .lean();
+
+        if (!classroomData) {
+            return res.status(404).json({ data: 'This classroom is not found.' });
         }
-        console.log(GetClassById)
-        return res.status(200).json({ data: 'Classroom fetched Succcessfully.', GetClassById })
+
+        for (let [key, subj] of Object.entries(classroomData.subject || {})) {
+            if (subj.teacher) {
+                const teacher = await user.findById(subj.teacher)
+                    .select("name email")
+                    .lean();
+                subj.teacher = teacher;
+            }
+        }
+
+        return res.status(200).json({
+            data: 'Classroom fetched successfully.',
+            GetClassById: classroomData
+        });
+
+    } catch (e) {
+        console.error(e.message);
+        return res.status(500).json({
+            data: 'Server is down while getting classroom.',
+            e: e.message
+        });
     }
-    catch (e) {
-        console.log(e.message)
-        return res.status(500).json({ data: 'Server is down while getting classroom.', e: e.message })
-    }
-}
+};
+
 
 // Create Student Credentials
 export const createStudent = async (req, res) => {
@@ -236,7 +264,7 @@ export const createStudent = async (req, res) => {
 //View All Student Information
 export const getAllStudents = async (req, res) => {
     try {
-        const getStudents = await student.find().populate('student', '-password')
+        const getStudents = await student.find().populate('student', '-password -role')
         console.log(getStudents)
         return res.status(200).json({ data: 'Fetched all the student information', getStudents })
     }
@@ -249,7 +277,7 @@ export const getAllStudents = async (req, res) => {
 //View Student by ID
 export const getStudentById = async (req, res) => {
     try {
-        const studentProfile = await student.findById(req.params.id).populate('student', '-password')
+        const studentProfile = await student.findById(req.params.id).populate('student', '-password -role')
         console.log(studentProfile)
         if (!studentProfile) {
             return res.status(404).json({ data: "This student does not exist" })
@@ -262,32 +290,20 @@ export const getStudentById = async (req, res) => {
     }
 }
 
-//Update Specific Student Details
+//Update Specific Student Details 
 export const updateStudent = async (req, res) => {
     try {
         const { rollNo, classId, dob, guardianName, address } = req.body
-
-        const updateStudent = await student.findById(req.params.id)
+        let updateData = {}
+        if (rollNo) updateData.rollNo = rollNo
+        if (dob) updateData.dob = new Date(dob)
+        if (guardianName) updateData.guardianName = guardianName
+        if (address) updateData.address = address
+        if (classId) updateData.classId = classId
+        const updateStudent = await student.findByIdAndUpdate(req.params.id, { $set: updateData }, { new: true })
         if (!updateStudent) {
             return res.status(404).json({ data: "Student not found." })
         }
-
-        if (classId) {
-            const classroom = await classroom.findById(classId)
-            if (!classroom) {
-                return res.status(404).json({ message: "Classroom not found." })
-            }
-            updateStudent.classId = classId
-            updateStudent.standard = classroom.standard
-            updateStudent.section = classroom.section
-        }
-
-        if (rollNo) updateStudent.rollNo = rollNo
-        if (dob) updateStudent.dob = dob
-        if (guardianName) updateStudent.guardianName = guardianName
-        if (address) updateStudent.address = address
-
-        await updateStudent.save()
         console.log(updateStudent)
         res.json({ data: "Student updated successfully", updateStudent })
     }
