@@ -36,6 +36,6 @@ adminRouter.put('/students/:id', updateStudent)
 adminRouter.delete('/students/:id', deleteStudent)
 
 //Attendance Management
-adminRouter.post('/students/upload', upload.single('file', uploadStudentsExcel))
+adminRouter.post('/students/upload', upload.single("file"), uploadStudentsExcel)
 
 export default adminRouter

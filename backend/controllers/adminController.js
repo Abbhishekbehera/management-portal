@@ -353,12 +353,20 @@ export const uploadStudentsExcel = async (req, res) => {
             return res.status(400).json({ data: "Excel file is empty." })
         }
 
-        const students = sheetData.map(row => ({
-            name: row.Name,
-            email: row.Email,
-            rollNo: row.RollNo,
-            classId: row.ClassId, dob: row.DOB ? new Date(row.DOB) : null
-        }))
+        const students = sheetData
+            .filter(row => row.Name && row.Email && row.RollNo)
+            .map(row => ({
+                name: row.Name,
+                email: row.Email,
+                rollNo: row.RollNo,
+                guardianName: row.GuardianName,
+                dob: row.DOB
+                    ? (typeof row.DOB === "number"
+                        ? new Date(Math.round((row.DOB - 25569) * 86400 * 1000)) // Convert Excel serial to JS date
+                        : new Date(row.DOB))
+                    : null
+
+            }))
 
         // Save to DataBase
         await student.insertMany(students)
@@ -375,7 +383,3 @@ export const uploadStudentsExcel = async (req, res) => {
     }
 }
 
-//Create Attendance
-export const createAttendance = async (req, res) => {
-
-}
