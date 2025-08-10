@@ -2,8 +2,10 @@ import express from 'express'
 //Student, Teacher and Classroom Management Controllers
 import {
     createStudent, getAllStudents, getStudentById, updateStudent, deleteStudent, createClassroom,
-    getAllClassroom, getClassroomById, createTeacher, viewAllTeacher, viewTeacherById, updateTeacherById
+    getAllClassroom, getClassroomById, createTeacher, viewAllTeacher, viewTeacherById, updateTeacherById,
+    uploadStudentsExcel
 } from '../controllers/adminController.js'
+import { upload } from '../middlewares/upload.js'
 
 const adminRouter = express.Router()
 //Teacher Management
@@ -33,5 +35,7 @@ adminRouter.put('/students/:id', updateStudent)
 
 adminRouter.delete('/students/:id', deleteStudent)
 
+//Attendance Management
+adminRouter.post('/students/upload', upload.single('file', uploadStudentsExcel))
 
 export default adminRouter

@@ -4,6 +4,9 @@ import user from '../models/user.js'
 import student from '../models/student.js'
 import bcrypt from 'bcrypt'
 import classroom from '../models/classroom.js'
+import attendance from '../models/attendance.js'
+import XLSX from 'xlsx'
+import fs from 'fs'
 
 //Create Teacher Credentials
 export const createTeacher = async (req, res) => {
@@ -67,7 +70,7 @@ export const viewTeacherById = async (req, res) => {
     }
 }
 
-//Update Teacher by ID => 
+//Update Teacher by ID 
 export const updateTeacherById = async (req, res) => {
     try {
         const { email, phoneNumber } = req.body
@@ -332,4 +335,47 @@ export const deleteStudent = async (req, res) => {
     }
 }
 
-//Upload Student Details in Excel
+//Upload Excel of Students
+export const uploadStudentsExcel = async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ data: "No file uploaded." })
+        }
+
+        const filePath = req.file.path
+
+        const workbook = XLSX.readFile(filePath)
+        const sheetName = workbook.SheetNames[0]
+        const sheetData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName])
+
+        if (!sheetData.length) {
+            fs.unlinkSync(filePath) // Delete file
+            return res.status(400).json({ data: "Excel file is empty." })
+        }
+
+        const students = sheetData.map(row => ({
+            name: row.Name,
+            email: row.Email,
+            rollNo: row.RollNo,
+            classId: row.ClassId, dob: row.DOB ? new Date(row.DOB) : null
+        }))
+
+        // Save to DataBase
+        await student.insertMany(students)
+
+        // Delete file after saving
+        fs.unlinkSync(filePath)
+
+        return res.status(201).json({ data: "Students uploaded in excel successfully.", totalInserted: students.length })
+
+    }
+    catch (e) {
+        console.error(e)
+        res.status(500).json({ data: "Server error while uploading students", e: e.message })
+    }
+}
+
+//Create Attendance
+export const createAttendance = async (req, res) => {
+
+}

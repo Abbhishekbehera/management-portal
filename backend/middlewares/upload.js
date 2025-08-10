@@ -1,16 +1,30 @@
-import multer from "multer";
+import multer from "multer"
 import path from 'path'
+import fs from 'fs'
 
-const storage = multer.memoryStorage()
+const uploadDir='uploads/'
+if(!fs.existsSync(uploadDir)){
+    fs.mkdirSync(uploadDir  )
+}
 
-const fileFilter=(req,file,cb)=>{
-    const ext=path.extname(file.originalname)
-    if(ext!=='.xlsx' && ext!='xls'){
-        return cb(new Error('Only Excel files are allowed'),false) 
+const storage = multer.diskStorage({
+    destination:function(req,file,cb){
+        cb(null,uploadDir)
+    },
+    filename:function(req,file,cb){
+        cb(null,Date.now()+path.extname(file.originalname))
+    }   
+})
+
+function fileFilter(req, file, cb) {
+    const filetypes = /xlsx|xls/;
+    const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
+    if (extname) {
+        return cb(null, true);
+    } else {
+        cb(new Error("Only Excel files are allowed"));
     }
-    cb(null,true)
 }
 
 export const upload=multer({storage,fileFilter})
 
-// controller call....multer csv files should be deleted after saving in  data db
