@@ -8,6 +8,7 @@ import {
 import { upload } from '../middlewares/upload.js'
 
 const adminRouter = express.Router()
+
 //Teacher Management
 adminRouter.post('/teachers', createTeacher)
 

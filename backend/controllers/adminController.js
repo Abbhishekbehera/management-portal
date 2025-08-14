@@ -360,13 +360,10 @@ export const uploadStudentsExcel = async (req, res) => {
                 email: row.Email,
                 rollNo: row.RollNo,
                 guardianName: row.GuardianName,
-                dob: row.DOB
-                    ? (typeof row.DOB === "number"
-                        ? new Date(Math.round((row.DOB - 25569) * 86400 * 1000)) // Convert Excel serial to JS date
-                        : new Date(row.DOB))
-                    : null
+                dob: row.DOB ? new Date(row.dob,XLSX.SSF.format("dd-mm-yyyy", row.dob)) : null
 
             }))
+            console.log(students)
 
         // Save to DataBase
         await student.insertMany(students)
