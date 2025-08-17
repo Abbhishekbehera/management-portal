@@ -7,6 +7,7 @@ import classroom from '../models/classroom.js'
 import attendance from '../models/attendance.js'
 import XLSX from 'xlsx'
 import fs from 'fs'
+import path from 'path'
 
 //Create Teacher Credentials
 export const createTeacher = async (req, res) => {
@@ -341,8 +342,9 @@ export const uploadStudentsExcel = async (req, res) => {
         if (!req.file) {
             return res.status(400).json({ data: "No file uploaded." })
         }
-
-        const filePath = req.file.path
+        
+        const filePath = path.resolve(req.file.path)
+        console.log(filePath)
 
         const workbook = XLSX.readFile(filePath)
         const sheetName = workbook.SheetNames[0]
@@ -353,30 +355,94 @@ export const uploadStudentsExcel = async (req, res) => {
             return res.status(400).json({ data: "Excel file is empty." })
         }
 
-        const students = sheetData
-            .filter(row => row.Name && row.Email && row.RollNo)
-            .map(row => ({
-                name: row.Name,
-                email: row.Email,
-                rollNo: row.RollNo,
-                guardianName: row.GuardianName,
-                dob: row.DOB ? new Date(row.dob,XLSX.SSF.format("dd-mm-yyyy", row.dob)) : null
 
-            }))
-            console.log(students)
+        const userData = sheetData
+            .filter(row => row.Name && row.PhoneNumber && row.RollNo)
+            .map(row => {
+                let dob = null;
+                console.log(typeof row.DateofBirth)
+
+                if (typeof row.DateofBirth === "number") {
+                    const parsed = XLSX.SSF.parse_date_code(row.DateofBirth);
+                    console.log(parsed)
+                    dob = new Date(Date.UTC(parsed.y, parsed.m - 1, parsed.d));
+
+
+                } else if (typeof row.DateofBirth === "string") {
+                    const [y, m, d] = row.DateofBirth.split("-").map(Number);
+                    dob = new Date(y, m - 1, d);
+                    console.log("2")
+                }
+
+                return {
+                    name: row.Name,
+                    phoneNumber: row.PhoneNumber,
+                    rollNo: row.RollNo,
+                    role: 'student',
+                    guardianName: row.GuardianName,
+                    dob
+                };
+            });
+
+
+
 
         // Save to DataBase
-        await student.insertMany(students)
+        const insertedDoc = await user.insertMany(userData)
 
-        // Delete file after saving
-        fs.unlinkSync(filePath)
+        const students = [];
 
-        return res.status(201).json({ data: "Students uploaded in excel successfully.", totalInserted: students.length })
+        for (const [i, row] of sheetData.entries()) {
+            let dob = null;
+
+
+            if (typeof row.DateofBirth === "number") {
+                const parsed = XLSX.SSF.parse_date_code(row.DateofBirth);
+                dob = new Date(Date.UTC(parsed.y, parsed.m - 1, parsed.d));
+            } else if (typeof row.DateofBirth === "string") {
+                const [y, m, d] = row.DateofBirth.split("-").map(Number);
+                dob = new Date(y, m - 1, d);
+            }
+
+
+            const classdoc = await classroom.findOne({
+                standard: String(row.Standard),
+                section: String(row.Section)
+            });
+            console.log(classdoc)
+
+            if (!classdoc) {
+                console.warn(
+                    ` No classroom found for Standard=${row.Standard}, Section=${row.Section}`
+                );
+            }
+
+            students.push({
+                name: row.Name,
+                student: insertedDoc[i]._id,
+                phoneNumber: row.PhoneNumber,
+                rollNo: row.RollNo,
+                role: "student",
+                guardianName: row.GuardianName,
+                dob,
+                classId: classdoc ? classdoc._id : null,
+            });
+        }
+
+        const insertedStudents = await student.insertMany(students);
+
+        return res.status(201).json({
+            data: "Students uploaded in excel successfully.",
+            totalInserted: students.length
+        })
 
     }
     catch (e) {
         console.error(e)
+        if (filePath && fs.existsSync(filePath)) {
+            fs.unlinkSync(filePath);
+            console.log("Temp file deleted:", filePath);
+        }
         res.status(500).json({ data: "Server error while uploading students", e: e.message })
     }
 }
-

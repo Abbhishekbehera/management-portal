@@ -8,7 +8,12 @@ const studentSchema = new mongoose.Schema({
     classId: { type: mongoose.Schema.Types.ObjectId, ref: "classroom" },
     dob: Date,
     guardianName: { type: String, required: true },
-    address: String
+    address: String,
+    commonRemarks: { type: String },
+    subjectWiseRemark: [{
+        subjectName: { type: String },
+        remark: { type: String }
+    }]
 })
 
 const student = new mongoose.model("student", studentSchema)

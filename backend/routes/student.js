@@ -1,20 +1,23 @@
 import express from 'express'
-import { getOverallAttendance,getDayWiseAttendance, viewHomeWork } from '../controllers/studentController.js'
+import { getOverallAttendance, getDayWiseAttendance, viewOverallHomework, viewDaywiseHomework, viewRemarks } from '../controllers/studentController.js'
 
 
-const studentRouter= express.Router()
+const studentRouter = express.Router()
 
 
 
 
 
 //Attendance Management
-studentRouter.get('/attendance/overall',getOverallAttendance)
-
-studentRouter.get('/attendance/daywise',getDayWiseAttendance)
+studentRouter.get('/attendance/overall', getOverallAttendance)
 
 //Homework Management
-studentRouter.get('/homework',viewHomeWork)
+studentRouter.get('/homework/overall', viewOverallHomework)
+
+studentRouter.get('/homework/daywise', viewDaywiseHomework)
+
+//Remarks Management
+studentRouter.get('/remarks', viewRemarks)
 
 
 
