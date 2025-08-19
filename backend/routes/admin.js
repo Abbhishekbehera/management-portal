@@ -1,11 +1,21 @@
 import express from 'express'
-//Student, Teacher and Classroom Management Controllers
+import { upload } from '../middlewares/upload.js'
+//Admin Management of Student, Teacher and Classroom Creation Controllers
 import {
-    createStudent, getAllStudents, getStudentById, updateStudent, deleteStudent, createClassroom,
-    getAllClassroom, getClassroomById, createTeacher, viewAllTeacher, viewTeacherById, updateTeacherById,
+    createStudent,
+    getAllStudents,
+    getStudentById,
+    updateStudent,
+    deleteStudent,
+    createClassroom,
+    getAllClassroom,
+    getClassroomById,
+    createTeacher,
+    viewAllTeacher,
+    viewTeacherById,
+    updateTeacherById,
     uploadStudentsExcel
 } from '../controllers/adminController.js'
-import { upload } from '../middlewares/upload.js'
 
 const adminRouter = express.Router()
 

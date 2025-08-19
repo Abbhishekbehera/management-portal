@@ -5,9 +5,10 @@ const homeWorkSchema = new mongoose.Schema({
     date: Date,
     homeWork: {
         type: Map,
-        of: new mongoose.Schema({ description: String, title: String }),
+        of: new mongoose.Schema({ subject: String, description: String }),
         default: {}
-    }
+    },
+    commonNote: { type: String }
 
 })
 

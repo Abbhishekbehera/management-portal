@@ -6,6 +6,7 @@ import dotenv from 'dotenv'
 
 
 dotenv.config()
+
 //Secret Key
 const secret_key = process.env.SECRET
 
