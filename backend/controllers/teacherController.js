@@ -2,6 +2,7 @@ import mongoose, { mongo } from 'mongoose'
 import homeWork from '../models/homework.js'
 import classroom from '../models/classroom.js'
 import student from '../models/student.js'
+import timetable from '../models/timetable.js'
 
 
 //Class Teacher Management -> Student Remarks
@@ -40,7 +41,7 @@ export const createNotes = async (req, res) => {
         // if (!teacherId) {
         //     return res.status(400).json({ data: 'TeacherId is requried.' })
         // }
-        const classID = new mongoose.Types.ObjectId(req.query.classRoom)
+        const classID = new mongoose.Types.ObjectId(req.query.classId)
         const { commonNote } = req.body
         if (!classID) {
             return res.status(400).json({ data: 'ClassId is required.' })
@@ -71,13 +72,27 @@ export const createNotes = async (req, res) => {
 //Class Teacher Management -> Create Timetable
 export const createTimeTable = async (req, res) => {
     try {
-        
+        // const teacherId = req.user.id
+        // if (!teacherId) {
+        //     return res.status(400).json({ data: 'TeacherId is requried.' })
+        // }
+        const { classId, schedule } = req.body
+        let existingTimetable = await timetable.findOne({ classRoom: classId })
+        if (!existingTimetable) {
+            existingTimetable = new timetable({
+                classRoom: classId,
+                schedule
+            })
+        } else {
+            existingTimetable.schedule = schedule
+        }
+        await existingTimetable.save()
+        res.status(200).json({ data: 'Successfully created timetable.' })
     } catch (e) {
         console.error(e)
         res.status(500).json({ data: 'Server error while creating timetable.' })
     }
 }
-
 
 //Subject Teacher Management -> Create Homework
 export const createHomework = async (req, res) => {
