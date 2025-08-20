@@ -1,8 +1,8 @@
 import mongoose, { mongo } from 'mongoose'
 import homeWork from '../models/homework.js'
-import classroom from '../models/classroom.js'
 import student from '../models/student.js'
 import timetable from '../models/timetable.js'
+import attendance from '../models/attendance.js'
 
 
 //Class Teacher Management -> Student Remarks
@@ -17,15 +17,14 @@ export const studentRemarks = async (req, res) => {
         if (!commonRemarks) {
             return res.status(400).json({ data: 'Common Remarks need to be filled.' })
         }
-        const studentData = await student.findById(studentID)
+        const studentData = await student.findByIdAndUpdate(studentID, { commonRemarks }, { new: true })
         if (!studentData) {
             return res.status(404).json({ data: 'Student not found.' })
         }
-        const newRemark = new student({ commonRemarks })
-        await newRemark.save();
+
         res.status(200).json({
             data: 'Successfully wrote remark for the student.',
-            remark: newRemark
+            remark: studentData
         })
     }
     catch (e) {
@@ -46,18 +45,8 @@ export const createNotes = async (req, res) => {
         if (!classID) {
             return res.status(400).json({ data: 'ClassId is required.' })
         }
-        let noteList = await homeWork.findOne({
-            classRoom: classID,
-            commonNote
-        });
-
-        if (!noteList) {
-            noteList = new homeWork({
-                classRoom: classID,
-                commonNote
-            });
-        }
-        await noteList.save()
+        const date = new Date()
+        const updateData = await homeWork.findOneAndUpdate({ classID, date }, { $set: { commonNote } }, { new: true, upsert: true })
         res.status(200).json({
             data: 'Successfully created common notes.',
             notice: commonNote
@@ -91,6 +80,88 @@ export const createTimeTable = async (req, res) => {
     } catch (e) {
         console.error(e)
         res.status(500).json({ data: 'Server error while creating timetable.' })
+    }
+}
+
+//Class Teacher Management -> Mark Attendance
+export const markAttendance = async (req, res) => {
+    try {
+        // const teacherId = req.user.id
+        // if (!teacherId) {
+        //     return res.status(400).json({ data: 'TeacherId is requried.' })
+        // }
+        const classId = new mongoose.Types.ObjectId(req.user.classId)
+        const { user, status } = req.body
+        if (!classId && user && date && status) {
+            return res.status(400).json({ data: 'These fields are required.' })
+        }
+        const markAttendance = new attendance({
+            user,
+            date: new Date(),
+            status
+        })
+        await markAttendance.save()
+        res.status(200).json({
+            data: 'Successfully marked down the attendance.',
+            attendanceData: markAttendance
+        })
+    }
+    catch (e) {
+        console.error(e)
+        res.status(500).json({ data: 'Server is down while marking attendance.' })
+    }
+}
+
+//Class Teacher Management -> List of Overall Attendance of Students
+export const attedanceOfStudents = async (req, res) => {
+    try {
+        // const teacherId = req.user.id
+        // if (!teacherId) {
+        //     return res.status(400).json({ data: 'TeacherId is requried.' })
+        // }
+        const classId = new mongoose.Types.ObjectId(req.query.classId)
+        if (!classId) {
+            return res.status(400).json({ data: 'ClassId is required.' })
+        }
+        const records = await attendance.findById({ classId }).populate("user", "name email")
+        if (!records.length) {
+            return res.status(404).json({ data: 'Attendance not found.' })
+        }
+        let attendanceData = [];
+
+        records.forEach(record => {
+            record.user.forEach(user => { // since user is an array
+                attendanceData.push({
+                    name: user.name,
+                    rollNo: user.rollNumber,
+                    status: record.status,
+                    date: record.date
+                })
+            })
+        })
+        res.status(200).json({
+            data: 'Successfully fetched overall attendance of the students.',
+            attendanceList: attendanceData
+        })
+    }
+    catch (e) {
+        console.error(e)
+        res.status(500).json({ data: 'Server error while fetching overall attendance of the students.' })
+    }
+}
+
+//Class Teacher Management -> List of Attendance can be seen
+export const listOfAttendance = async (req, res) => {
+    try {
+        // const teacherId = req.user.id
+        // if (!teacherId) {
+        //     return res.status(400).json({ data: 'TeacherId is requried.' })
+        // }
+        res.status(200).json({ data: 'Successfully fetched list of attendance.' })
+    }
+    catch (e) {
+        console.error(e)
+        res.status(500).json({ data: 'Server error while fetching list of attendance.' })
     }
 }
 

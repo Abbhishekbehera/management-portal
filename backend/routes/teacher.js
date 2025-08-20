@@ -4,7 +4,10 @@ import {
     writeRemarks,
     studentRemarks,
     createNotes,
-    createTimeTable
+    createTimeTable,
+    markAttendance,
+    attedanceOfStudents,
+    listOfAttendance
 } from '../controllers/teacherController.js'
 
 const teacherRouter = express.Router()
@@ -20,9 +23,13 @@ teacherRouter.post('/class/remarks', studentRemarks)
 
 teacherRouter.post('/class/notes', createNotes)
 
-teacherRouter.post('/class/timetable',createTimeTable)
+teacherRouter.post('/class/timetable', createTimeTable)
 
+teacherRouter.post('/class/markattendance', markAttendance)
 
+teacherRouter.get('/class/studentattendance',attedanceOfStudents)
+
+teacherRouter.get('/class/attendancelist',listOfAttendance)
 
 
 
