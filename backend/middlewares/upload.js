@@ -2,18 +2,18 @@ import multer from "multer"
 import path from 'path'
 import fs from 'fs'
 
-const uploadDir='uploads/'
-if(!fs.existsSync(uploadDir)){
-    fs.mkdirSync(uploadDir  )
+const uploadDir = 'uploads/'
+if (!fs.existsSync(uploadDir)) {
+    fs.mkdirSync(uploadDir)
 }
 
 const storage = multer.diskStorage({
-    destination:function(req,file,cb){
-        cb(null,uploadDir)
+    destination: function (req, file, cb) {
+        cb(null, uploadDir)
     },
-    filename:function(req,file,cb){
-        cb(null,Date.now()+path.extname(file.originalname))
-    }   
+    filename: function (req, file, cb) {
+        cb(null, Date.now() + path.extname(file.originalname))
+    }
 })
 
 function fileFilter(req, file, cb) {
@@ -26,5 +26,5 @@ function fileFilter(req, file, cb) {
     }
 }
 
-export const upload=multer({storage,fileFilter})
+export const upload = multer({ storage, fileFilter })
 

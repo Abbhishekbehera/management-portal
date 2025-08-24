@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import user from "../models/user.js"
 import attendance from "../models/attendance.js";
 import homework from "../models/homework.js";
 import student from '../models/student.js'
@@ -6,6 +7,8 @@ import leave from "../models/leave.js";
 import Redis from 'ioredis';
 import axios from 'axios';
 import dotenv from 'dotenv';
+import nodemailer from 'nodemailer'
+import jwt from 'jsonwebtoken'
 
 dotenv.config()
 
@@ -23,30 +26,46 @@ function generateOTP() {
 //Register Management of the Student
 export const registerStudent = async (req, res) => {
     try {
-        const { name, phoneNumber } = req.body
-        const Student = await student.findOne({ name: name, phoneNumber: phoneNumber, role: 'student' })
+        const { name, phoneNumber, role } = req.body
+        const Student = await user.findOne({ name: name, phoneNumber: phoneNumber, role: role })
         if (!Student) {
             return res.status(400).json({ data: 'Student not found.' })
         }
         const otp = generateOTP()
-        await redis.set(`opt:${phoneNumber}`, otp, "Ex", 300)
-        const response = await axios.post(
-            "https://www.fast2sms.com/dev/bulkV2",
-            {
-                route: "q",
-                message: `Your OTP is ${otp}`,
-                numbers: phoneNumber,
+        await redis.set(`otp:${phoneNumber}`, otp, "Ex", 300)
+        const transporter = nodemailer.createTransport({
+            secure: false, // true for port 465, false for other ports
+            host: "smtp.gmail.com",
+            port: 587,
+            auth: {
+                user: process.env.USER_EMAIL,
+                // pass: "ykce lxeb uyzd mazs"
+                pass: process.env.USER_PASSWORD
             },
-            {
-                headers: {
-                    authorization: process.env.FAST2SMS_API_KEY,
-                },
+        });
+
+        // Async function to send mail
+        const sendMail = async () => {
+            try {
+                const info = await transporter.sendMail({
+                    from: "Abbhishek Behera",
+                    to: Student.email,
+                    subject: "Hello ✔",
+                    text: `${otp}`, // plain text
+                    html: `<h3>Your OTP is:</h3> <b>${otp}</b>` // HTML body
+                });
+
+                console.log("Message sent:", info.messageId);
+            } catch (error) {
+                console.error("Error sending email:", error);
             }
-        );
+        };
+
+        sendMail();
         res.status(200).json({ data: 'OTP send successfully.' })
     }
     catch (e) {
-        console.error
+        console.log(e)
         res.status(500).json({ data: 'Server is down while generating OTP.' })
     }
 }
@@ -56,14 +75,18 @@ export const verifyOTP = async (req, res) => {
     try {
         const { name, phoneNumber, otp } = req.body
         const storedOTP = await redis.get(`otp:${phoneNumber}`)
+        console.log(storedOTP, otp)
         if (!storedOTP) {
             return res.status(400).json({ data: 'OTP not found.' })
         }
         if (storedOTP !== otp) {
             return res.status(400).json({ data: 'OTP is wrong.' })
         }
-        await redis.delete(`otp:${phoneNumber}`)
-        const Student = await student.findOne({ name: name, phoneNumber: phoneNumber, role: 'student' })
+        console.log("dsadf")
+        await redis.del(`otp:${phoneNumber}`)
+        console.log("Ok")
+        const Student = await user.findOne({ name: name, phoneNumber: phoneNumber, role: 'student' })
+        console.log(Student)
         const token = jwt.sign({
             Student,
         }, secret_key, { expiresIn: '5h' })
@@ -78,8 +101,8 @@ export const verifyOTP = async (req, res) => {
 //Overall Attendance
 export const getOverallAttendance = async (req, res) => {
     try {
-        const studentId = req.user.id
-        const classId = new mongoose.ObjectId(req.user.classId)
+        const studentId = req.user?.id || req.query.studentId
+        const classId = req.query.classId
         const { startdate, endDate } = req.query
         if (!classId && !studentId) {
             return res.status(400).json({ data: 'ClassID and StudentID are required.' })
@@ -93,15 +116,18 @@ export const getOverallAttendance = async (req, res) => {
                 }
             }
         }
-        const totalDays = attendance.countDocuments({ classId: classId, ...dateFilter })
-        const presentDays = attendance.countDocuments({ user: { $in: [studentId] }, status: 'present', ...dateFilter })
-        const absentDays = attendance.countDocuments({ user: { $in: [studentId] }, status: 'absent', ...dateFilter })
+        const totalDays = await attendance.countDocuments({ user: { $in: [studentId] }, ...dateFilter })
+        const presentDays = await attendance.countDocuments({ user: { $in: [studentId] }, status: 'present', ...dateFilter })
+        const absentDays = await attendance.countDocuments({ user: { $in: [studentId] }, status: 'absent', ...dateFilter })
+
         const percentage = totalDays > 0 ? ((presentDays / totalDays) * 100).toFixed(2) : "0.00"
+
         res.status(200).json({
             data: 'Successfull in fetching the attendance of the student.',
-            totalDays: totalDays,
-            presentDays: presentDays,
-            absentDays: absentDays, percentage: `${percentage}`
+            totalDays,
+            presentDays,
+            absentDays,
+            percentage
         })
     }
     catch (e) {
@@ -113,7 +139,7 @@ export const getOverallAttendance = async (req, res) => {
 //Homework Management Overall
 export const viewOverallHomework = async (req, res) => {
     try {
-        const classId = req.user.id
+        const classId = req.query.classId
         const { startdate, endDate } = req.query
         if (!classId) {
             return res.status(400).json({ data: 'ClassID are required.' })
@@ -127,11 +153,12 @@ export const viewOverallHomework = async (req, res) => {
                 }
             }
         }
-        const homeworkList = await homework.find({ classRoom: classId, ...dateFilter })
+        const homeworkList = await homework.find({ classId: classId, ...dateFilter })
         if (!homeworkList.length) {
             return res.status(404).json({ data: 'No homework found for this class.' })
         }
         console.log(homeworkList)
+        console.log(homeworkList.length)
         res.status(200).json({ data: 'Successfully fetched homework list.', homework: homeworkList });
     }
     catch (e) {
@@ -143,22 +170,23 @@ export const viewOverallHomework = async (req, res) => {
 //Homework Management Day-Wise
 export const viewDaywiseHomework = async (req, res) => {
     try {
-        const classId = req.user.id
+        const classId = req.query.classId
         if (!classId) {
             return res.status(400).json({ data: 'ClassId required.' })
         }
-        const startdate = new Date();
-        startOfDay.setHours(0, 0, 0, 0)
-        const enddate = new Date()
-        endOfDay.setHours(23, 59, 59, 999)
+        const startDate = new Date();
+        startDate.setHours(0, 0, 0, 0)
+        const endDate = new Date()
+        endDate.setHours(23, 59, 59, 999)
         const Homework = await homework.find({
-            classRoom: classId,
-            date: { $gte: startdate, $lte: enddate }
+            classId: classId,
+            date: { $gte: startDate, $lte: endDate }
         })
-        if (!homework.length) {
+        if (!Homework.length) {
             return res.status(404).json({ data: 'No homework found.' })
         }
         console.log(Homework)
+        console.log(Homework.length)
         res.status(200).json({ data: 'Successfully fetched day-wise homework.', homework: Homework })
     }
     catch (e) {
@@ -171,7 +199,8 @@ export const viewDaywiseHomework = async (req, res) => {
 export const viewRemarks = async (req, res) => {
     try {
         const studentId = req.user.id
-        const studentData = await student.findOne({ studentId }).select('commonRemarks subjectWiseRemark')
+        // const studentId = req.query.studentId
+        const studentData = await student.findById(studentId).select('commonRemarks subjectWiseRemark')
         if (!studentData) {
             return res.status(404).json({ data: 'Student data not found.' })
         }
@@ -188,22 +217,22 @@ export const applyLeave = async (req, res) => {
     try {
         const userId = req.user.id
         const Classroom = req.user.classId
-        const { reason, fromDate, toDate } = req.body
-        if (!userId && !Classroom && !reason && !fromDate && !toDate) {
+        const { reason, startDate, endDate } = req.body
+        if (!reason && !startDate && !endDate) {
             return res.status(404).json({ data: 'All fields are required.' })
         }
         const leaveReq = new leave({
             userId,
             Classroom,
             reason,
-            fromDate,
-            toDate
+            startDate,
+            endDate
         })
-        await leave.save()
+        await leaveReq.save()
         res.status(201).json({ data: 'Successfully created.', leaveReq: leaveReq })
     }
     catch (e) {
-        console.log(e.message)
+        console.error(e)
         res.status(500).json({ data: "Server error while requesting leave." })
     }
 }

@@ -1,7 +1,7 @@
 import mongoose from 'mongoose'
 
 const leaveSchema = new mongoose.Schema({
-    userId: { type: mongoose.Schema.Types.ObjectId, required: true, ref: "user" },
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: "user" },
     classId: { type: mongoose.Schema.Types.ObjectId, ref: "classroom" },
     reason: { type: String, required: true },
     status: { type: String, enum: ['pending', 'approved', 'declined'], default: 'pending' },

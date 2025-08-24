@@ -1,5 +1,6 @@
 import express from 'express'
 import { upload } from '../middlewares/upload.js'
+import authMiddleware from '../middlewares/authMiddleware.js'
 //Admin Management of Student, Teacher and Classroom Creation Controllers
 import {
     createStudent,
@@ -20,33 +21,33 @@ import {
 const adminRouter = express.Router()
 
 //Teacher Management
-adminRouter.post('/teachers', createTeacher)
+adminRouter.post('/teachers', authMiddleware, authorizeRoles('admin'), createTeacher)
 
-adminRouter.get('/teachers', viewAllTeacher)
+adminRouter.get('/teachers', authMiddleware, authorizeRoles('admin'), viewAllTeacher)
 
-adminRouter.get('/teachers/:id', viewTeacherById)
+adminRouter.get('/teachers/:id', authMiddleware, authorizeRoles('admin'), viewTeacherById)
 
-adminRouter.put('/teachers/:id', updateTeacherById)
+adminRouter.put('/teachers/:id', authMiddleware, authorizeRoles('admin'), updateTeacherById)
 
 //ClassRoom Management
-adminRouter.post('/classrooms', createClassroom)
+adminRouter.post('/classrooms', authMiddleware, authorizeRoles('admin'), createClassroom)
 
-adminRouter.get('/classrooms', getAllClassroom)
+adminRouter.get('/classrooms', authMiddleware, authorizeRoles('admin'), getAllClassroom)
 
-adminRouter.get('/classrooms/:id', getClassroomById)
+adminRouter.get('/classrooms/:id', authMiddleware, authorizeRoles('admin'), getClassroomById)
 
 //Student Management
-adminRouter.post('/students', createStudent)
+adminRouter.post('/students', authMiddleware, authorizeRoles('admin'), createStudent)
 
-adminRouter.get('/students', getAllStudents)
+adminRouter.get('/students', authMiddleware, authorizeRoles('admin'), getAllStudents)
 
-adminRouter.get('/students/:id', getStudentById)
+adminRouter.get('/students/:id', authMiddleware, authorizeRoles('admin'), getStudentById)
 
-adminRouter.put('/students/:id', updateStudent)
+adminRouter.put('/students/:id', authMiddleware, authorizeRoles('admin'), updateStudent)
 
-adminRouter.delete('/students/:id', deleteStudent)
+adminRouter.delete('/students/:id', authMiddleware, authorizeRoles('admin'), deleteStudent)
 
 //Attendance Management
-adminRouter.post('/students/upload', upload.single("file"), uploadStudentsExcel)
+adminRouter.post('/students/upload', authMiddleware, authorizeRoles('admin'), upload.single("file"), uploadStudentsExcel)
 
 export default adminRouter

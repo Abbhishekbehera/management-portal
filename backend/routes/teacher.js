@@ -7,29 +7,28 @@ import {
     createTimeTable,
     markAttendance,
     attedanceOfStudents,
-    listOfAttendance
 } from '../controllers/teacherController.js'
-
+import authMiddleware from '../middlewares/authMiddleware.js'
 const teacherRouter = express.Router()
 
 
 //Subject Teacher Management
-teacherRouter.post('/subjects/homework', createHomework)
+teacherRouter.post('/subjects/homework', authMiddleware, authorizeRoles('teacher'), createHomework)
 
-teacherRouter.post('/subjects/remarks', writeRemarks)
+teacherRouter.post('/subjects/remarks', authMiddleware, authorizeRoles('teacher'), writeRemarks)
 
 //Class Teacher Management
-teacherRouter.post('/class/remarks', studentRemarks)
+teacherRouter.post('/class/remarks', authMiddleware, authorizeRoles('teacher'), studentRemarks)
 
-teacherRouter.post('/class/notes', createNotes)
+teacherRouter.post('/class/notes', authMiddleware, authorizeRoles('teacher'), createNotes)
 
-teacherRouter.post('/class/timetable', createTimeTable)
+teacherRouter.post('/class/timetable', authMiddleware, authorizeRoles('teacher'), createTimeTable)
 
-teacherRouter.post('/class/markattendance', markAttendance)
+teacherRouter.post('/class/markattendance', authMiddleware, authorizeRoles('teacher'), markAttendance)
 
-teacherRouter.get('/class/studentattendance',attedanceOfStudents)
+teacherRouter.get('/class/studentattendance', authMiddleware, authorizeRoles('teacher'), attedanceOfStudents)
 
-teacherRouter.get('/class/attendancelist',listOfAttendance)
+// teacherRouter.get('/class/attendancelist',listOfAttendance)
 
 
 

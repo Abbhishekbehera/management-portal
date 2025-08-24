@@ -1,7 +1,7 @@
 import mongoose, { Mongoose } from "mongoose";
 
 const homeWorkSchema = new mongoose.Schema({
-    classRoom: { type: mongoose.Schema.Types.ObjectId, ref: 'classroom' },
+    classId: { type: mongoose.Schema.Types.ObjectId, ref: 'classroom' },
     date: Date,
     homeWork: {
         type: Map,

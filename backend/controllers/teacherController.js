@@ -8,10 +8,10 @@ import attendance from '../models/attendance.js'
 //Class Teacher Management -> Student Remarks
 export const studentRemarks = async (req, res) => {
     try {
-        // const teacherId = req.user.id
-        // if (!teacherId) {
-        //     return res.status(400).json({ data: 'TeacherId is requried.' })
-        // }
+        const teacherId = req.user.id
+        if (!teacherId) {
+            return res.status(400).json({ data: 'TeacherId is requried.' })
+        }
         const studentID = new mongoose.Types.ObjectId(req.query.student)
         const { commonRemarks } = req.body
         if (!commonRemarks) {
@@ -36,20 +36,25 @@ export const studentRemarks = async (req, res) => {
 //Class Teacher Management -> Common Notes
 export const createNotes = async (req, res) => {
     try {
-        // const teacherId = req.user.id
-        // if (!teacherId) {
-        //     return res.status(400).json({ data: 'TeacherId is requried.' })
-        // }
-        const classID = new mongoose.Types.ObjectId(req.query.classId)
+        const teacherId = req.user.id
+        if (!teacherId) {
+            return res.status(400).json({ data: 'TeacherId is requried.' })
+        }
+        console.log(req.query)
+        const classId = new mongoose.Types.ObjectId(req.query.classId)
         const { commonNote } = req.body
-        if (!classID) {
+        if (!classId) {
             return res.status(400).json({ data: 'ClassId is required.' })
         }
-        const date = new Date()
-        const updateData = await homeWork.findOneAndUpdate({ classID, date }, { $set: { commonNote } }, { new: true, upsert: true })
+        const startDate = new Date()
+        startDate.setHours(0, 0, 0, 0)
+        const endDate = new Date()
+        endDate.setHours(23, 59, 59, 999)
+
+        const updateData = await homeWork.findOneAndUpdate({ classId: classId, date: { $gte: startDate, $lte: endDate } }, { $set: { commonNote } }, { new: true, upsert: true })
         res.status(200).json({
             data: 'Successfully created common notes.',
-            notice: commonNote
+            notice: updateData.commonNote
         })
     }
     catch (e) {
@@ -61,10 +66,10 @@ export const createNotes = async (req, res) => {
 //Class Teacher Management -> Create Timetable
 export const createTimeTable = async (req, res) => {
     try {
-        // const teacherId = req.user.id
-        // if (!teacherId) {
-        //     return res.status(400).json({ data: 'TeacherId is requried.' })
-        // }
+        const teacherId = req.user.id
+        if (!teacherId) {
+            return res.status(400).json({ data: 'TeacherId is requried.' })
+        }
         const { classId, schedule } = req.body
         let existingTimetable = await timetable.findOne({ classRoom: classId })
         if (!existingTimetable) {
@@ -86,17 +91,18 @@ export const createTimeTable = async (req, res) => {
 //Class Teacher Management -> Mark Attendance
 export const markAttendance = async (req, res) => {
     try {
-        // const teacherId = req.user.id
-        // if (!teacherId) {
-        //     return res.status(400).json({ data: 'TeacherId is requried.' })
-        // }
-        const classId = new mongoose.Types.ObjectId(req.user.classId)
+        const teacherId = req.user.id
+        if (!teacherId) {
+            return res.status(400).json({ data: 'TeacherId is requried.' })
+        }
+        const classId = new mongoose.Types.ObjectId(req.query.classId)
         const { user, status } = req.body
-        if (!classId && user && date && status) {
+        if (!classId && user && status) {
             return res.status(400).json({ data: 'These fields are required.' })
         }
         const markAttendance = new attendance({
             user,
+            classId,
             date: new Date(),
             status
         })
@@ -115,53 +121,37 @@ export const markAttendance = async (req, res) => {
 //Class Teacher Management -> List of Overall Attendance of Students
 export const attedanceOfStudents = async (req, res) => {
     try {
-        // const teacherId = req.user.id
-        // if (!teacherId) {
-        //     return res.status(400).json({ data: 'TeacherId is requried.' })
-        // }
+        const teacherId = req.user.id
+        if (!teacherId) {
+            return res.status(400).json({ data: 'TeacherId is requried.' })
+        }
+        console.log(req.query.classId)
         const classId = new mongoose.Types.ObjectId(req.query.classId)
         if (!classId) {
             return res.status(400).json({ data: 'ClassId is required.' })
         }
-        const records = await attendance.findById({ classId }).populate("user", "name email")
+        const records = await attendance.aggregate([{ $match: { classId: classId } },
+        { $unwind: "$user" },
+        {
+            $group: {
+                _id: { user: "$user", status: "$status" }, count: { $sum: 1 }
+            }
+        }, { $group: { _id: "$_id.user", stats: { $push: { status: "$_id.status", count: "$count" } } } }
+            , { $lookup: { from: "users", localField: "_id", foreignField: "_id", as: "user" } },
+        { $unwind: "$user" },
+        { $project: { _id: 0, userName: "$user.name", stats: 1 } }])
+        console.log(records)
         if (!records.length) {
             return res.status(404).json({ data: 'Attendance not found.' })
         }
-        let attendanceData = [];
-
-        records.forEach(record => {
-            record.user.forEach(user => { // since user is an array
-                attendanceData.push({
-                    name: user.name,
-                    rollNo: user.rollNumber,
-                    status: record.status,
-                    date: record.date
-                })
-            })
-        })
         res.status(200).json({
             data: 'Successfully fetched overall attendance of the students.',
-            attendanceList: attendanceData
+            records: records
         })
     }
     catch (e) {
         console.error(e)
         res.status(500).json({ data: 'Server error while fetching overall attendance of the students.' })
-    }
-}
-
-//Class Teacher Management -> List of Attendance can be seen
-export const listOfAttendance = async (req, res) => {
-    try {
-        // const teacherId = req.user.id
-        // if (!teacherId) {
-        //     return res.status(400).json({ data: 'TeacherId is requried.' })
-        // }
-        res.status(200).json({ data: 'Successfully fetched list of attendance.' })
-    }
-    catch (e) {
-        console.error(e)
-        res.status(500).json({ data: 'Server error while fetching list of attendance.' })
     }
 }
 
@@ -171,22 +161,23 @@ export const createHomework = async (req, res) => {
         const classId = new mongoose.Types.ObjectId(req.query.classId);
         const { subject, description } = req.body;
 
-        if (!classId || !subject || !description) {
+        if (!classId && !subject && !description) {
             return res.status(400).json({ data: "ClassId, subject, and description are required." });
         }
 
         // Normalize date to only keep YYYY-MM-DD
         const today = new Date();
         today.setHours(0, 0, 0, 0);
-
+        const todayEnd = new Date()
+        todayEnd.setHours(23, 59, 59, 999)
         let homeWorkList = await homeWork.findOne({
-            classRoom: classId,
-            date: today
+            classId: classId,
+            date: { $gte: today, $lte: todayEnd }
         });
 
         if (!homeWorkList) {
             homeWorkList = new homeWork({
-                classRoom: classId,
+                classId: classId,
                 date: today,
                 homeWork: new Map(),
             });
@@ -210,10 +201,10 @@ export const createHomework = async (req, res) => {
 //Subject Teacher Management -> Write Remarks and Improvement
 export const writeRemarks = async (req, res) => {
     try {
-        // const teacherId = req.user.id
-        // if (!teacherId) {
-        //     return res.status(400).json({ data: 'TeacherId is requried.' })
-        // }
+        const teacherId = req.user.id
+        if (!teacherId) {
+            return res.status(400).json({ data: 'TeacherId is requried.' })
+        }
         console.log(req.query)
         const studentId = new mongoose.Types.ObjectId(req.query.student)
         const { subjectName, remark } = req.body
