@@ -9,6 +9,7 @@ import axios from 'axios';
 import dotenv from 'dotenv';
 import nodemailer from 'nodemailer'
 import jwt from 'jsonwebtoken'
+import student from "../models/student.js";
 
 dotenv.config()
 
@@ -85,10 +86,19 @@ export const verifyOTP = async (req, res) => {
         console.log("dsadf")
         await redis.del(`otp:${phoneNumber}`)
         console.log("Ok")
-        const Student = await user.findOne({ name: name, phoneNumber: phoneNumber, role: 'student' })
-        console.log(Student)
+        const user = await user.findOne({ name: name, phoneNumber: phoneNumber, role: 'student' })
+        console.log(user)
+
+        const studentDoc= await student.find({student:user._id})
+        const classId= student.classId
+        const  studenData={}
+
+        studenData._id=user?._id
+        studenData.classId= studentDoc?.classId
+
+
         const token = jwt.sign({
-            Student,
+            studenData,
         }, secret_key, { expiresIn: '5h' })
         res.status(200).json({ token })
     }
@@ -212,7 +222,7 @@ export const viewRemarks = async (req, res) => {
     }
 }
 
-//Leave Management
+//Leave Management -> By Students
 export const applyLeave = async (req, res) => {
     try {
         const userId = req.user.id

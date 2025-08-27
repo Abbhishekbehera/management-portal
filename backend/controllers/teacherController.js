@@ -3,7 +3,7 @@ import homeWork from '../models/homework.js'
 import student from '../models/student.js'
 import timetable from '../models/timetable.js'
 import attendance from '../models/attendance.js'
-
+import leave from "../models/leave.js"
 
 //Class Teacher Management -> Student Remarks
 export const studentRemarks = async (req, res) => {
@@ -152,6 +152,76 @@ export const attedanceOfStudents = async (req, res) => {
     catch (e) {
         console.error(e)
         res.status(500).json({ data: 'Server error while fetching overall attendance of the students.' })
+    }
+}
+
+//Class Teacher Management -> View Leave Requests for students
+export const viewLeaveRequests = async (req, res) => {
+    try {
+        // const teacherId = req.user.id
+        // if (!teacherId) {
+        //     return res.status(400).json({ data: 'TeacherId is requried.' })
+        // }
+        const classId = new mongoose.Types.ObjectId(req.query.classId)
+        const { status } = req.query
+        if (!classId && status) {
+            return res.status(400).json({ data: "ClassId and status are required." })
+        }
+        const leaveReq = await leave.find({ classId }).populate("userId", "name").sort({ startDate: 1 })
+        res.status(200).json({ data: "Successfully fetched leave requests.", leave: leaveReq })
+    }
+    catch (e) {
+        console.log(e.message)
+        res.status(500).json({ data: "Server errro while viewing leave requests." })
+    }
+}
+
+//Class Teacher Management -> Approve Leave Requests for students
+export const approveRequests = async (req, res) => {
+    try {
+        // const teacherId = req.user.id
+        // if (!teacherId) {
+        //     return res.status(400).json({ data: 'TeacherId is requried.' })
+        // }
+        const { leaveId } = req.params
+        const { status } = req.body
+        if (!status) {
+            res.status(400).json({ data: "Status field is required." })
+        }
+        const updateLeaveRequests = await leave.findByIdAndUpdate(leaveId, { status: status }, { new: true })
+        if (!updateLeaveRequests) {
+            return res.status(404).json({ data: "Leave request not found." })
+        }
+        res.status(200).json({ data: "Successfully approved leave request.", leaveReq: updateLeaveRequests })
+    }
+    catch (e) {
+        console.log(e.message)
+        res.status(500).json({ data: "Server error while approving leave requests." })
+    }
+}
+
+//Leave Management -> By Teachers[Class Teacher and Subject Teacher]
+export const applyLeave = async (req, res) => {
+    try {
+        const userId = req.user.id
+        const Classroom = req.user.classId
+        const { reason, startDate, endDate } = req.body
+        if (!reason && !startDate && !endDate) {
+            return res.status(404).json({ data: 'All fields are required.' })
+        }
+        const leaveReq = new leave({
+            userId,
+            Classroom,
+            reason,
+            startDate,
+            endDate
+        })
+        await leaveReq.save()
+        res.status(201).json({ data: 'Successfully created.', leaveReq: leaveReq })
+    }
+    catch (e) {
+        console.error(e)
+        res.status(500).json({ data: "Server error while requesting leave." })
     }
 }
 

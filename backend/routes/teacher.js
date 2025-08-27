@@ -7,6 +7,9 @@ import {
     createTimeTable,
     markAttendance,
     attedanceOfStudents,
+    viewLeaveRequests,
+    approveRequests,
+    applyLeave,
 } from '../controllers/teacherController.js'
 import authMiddleware from '../middlewares/authMiddleware.js'
 const teacherRouter = express.Router()
@@ -28,9 +31,11 @@ teacherRouter.post('/class/markattendance', authMiddleware, authorizeRoles('teac
 
 teacherRouter.get('/class/studentattendance', authMiddleware, authorizeRoles('teacher'), attedanceOfStudents)
 
-// teacherRouter.get('/class/attendancelist',listOfAttendance)
+teacherRouter.post('/leave', authMiddleware, authorizeRoles('teacher'), applyLeave)
 
+teacherRouter.get('/class/studentattendance', viewLeaveRequests)
 
+teacherRouter.put('/class/studentattendance/:id', approveRequests)
 
 
 export default teacherRouter

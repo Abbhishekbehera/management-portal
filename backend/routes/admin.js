@@ -17,6 +17,7 @@ import {
     updateTeacherById,
     uploadStudentsExcel
 } from '../controllers/adminController.js'
+import { approveRequests, viewLeaveRequests } from '../controllers/teacherController.js'
 
 const adminRouter = express.Router()
 
@@ -28,6 +29,10 @@ adminRouter.get('/teachers', authMiddleware, authorizeRoles('admin'), viewAllTea
 adminRouter.get('/teachers/:id', authMiddleware, authorizeRoles('admin'), viewTeacherById)
 
 adminRouter.put('/teachers/:id', authMiddleware, authorizeRoles('admin'), updateTeacherById)
+
+adminRouter.get('/class/studentattendance', viewLeaveRequests)
+
+adminRouter.put('/class/studentattendance/:id', approveRequests)
 
 //ClassRoom Management
 adminRouter.post('/classrooms', authMiddleware, authorizeRoles('admin'), createClassroom)

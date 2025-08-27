@@ -5,6 +5,7 @@ import student from '../models/student.js'
 import bcrypt from 'bcrypt'
 import classroom from '../models/classroom.js'
 import attendance from '../models/attendance.js'
+import leave from "../models/leave.js"
 import XLSX from 'xlsx'
 import fs from 'fs'
 import path from 'path'
@@ -12,6 +13,10 @@ import path from 'path'
 //Create Teacher Credentials
 export const createTeacher = async (req, res) => {
     try {
+        const adminId = req.user.id
+        if (!adminId) {
+            return res.status(400).json({ data: 'AdminId is requried.' })
+        }
         const { name, email, password, phoneNumber } = req.body
         if (!name || !email || !password || !phoneNumber) {
             return res.status(400).json({ data: 'All fields are required.' })
@@ -42,6 +47,10 @@ export const createTeacher = async (req, res) => {
 //View All Teachers
 export const viewAllTeacher = async (req, res) => {
     try {
+        const adminId = req.user.id
+        if (!adminId) {
+            return res.status(400).json({ data: 'AdminId is requried.' })
+        }
         const getAllTeacher = await user.find({ role: 'teacher' }).select('-password')
         if (!getAllTeacher) {
             return res.status(404).json({ data: 'No Teacher exists.' })
@@ -58,6 +67,10 @@ export const viewAllTeacher = async (req, res) => {
 //View Teacher by ID
 export const viewTeacherById = async (req, res) => {
     try {
+        const adminId = req.user.id
+        if (!adminId) {
+            return res.status(400).json({ data: 'AdminId is requried.' })
+        }
         const getTeacher = await user.findById({ _id: req.params.id, role: 'teacher' }).select('-password')
         if (!getTeacher) {
             return res.status().json({ data: 'Teacher not found.', getTeacher })
@@ -74,6 +87,10 @@ export const viewTeacherById = async (req, res) => {
 //Update Teacher by ID 
 export const updateTeacherById = async (req, res) => {
     try {
+        const adminId = req.user.id
+        if (!adminId) {
+            return res.status(400).json({ data: 'AdminId is requried.' })
+        }
         const { email, phoneNumber } = req.body
 
         let updateData = {}
@@ -98,9 +115,58 @@ export const updateTeacherById = async (req, res) => {
 
 }
 
+//Admin Management -> View Leave Requests for teachers
+export const viewLeaveRequests = async (req, res) => {
+    try {
+        // const adminId = req.user.id
+        // if (!adminId) {
+        //     return res.status(400).json({ data: 'AdminId is requried.' })
+        // }
+        const classId = new mongoose.Types.ObjectId(req.query.classId)
+        const { status } = req.query
+        if (!classId && status) {
+            return res.status(400).json({ data: "ClassId and status are required." })
+        }
+        const leaveReq = await leave.find({ classId }).populate("userId", "name").sort({ startDate: 1 })
+        res.status(200).json({ data: "Successfully fetched leave requests.", leave: leaveReq })
+    }
+    catch (e) {
+        console.log(e.message)
+        res.status(500).json({ data: "Server errro while viewing leave requests." })
+    }
+}
+
+//Admin Management -> Approve Leave Requests for teachers
+export const approveRequests = async (req, res) => {
+    try {
+        // const adminId = req.user.id
+        // if (!adminId) {
+        //     return res.status(400).json({ data: 'AdminId is requried.' })
+        // }
+        const { leaveId } = req.params
+        const { status } = req.body
+        if (!status) {
+            res.status(400).json({ data: "Status field is required." })
+        }
+        const updateLeaveRequests = await leave.findByIdAndUpdate(leaveId, { status: status }, { new: true })
+        if (!updateLeaveRequests) {
+            return res.status(404).json({ data: "Leave request not found." })
+        }
+        res.status(200).json({ data: "Successfully approved leave request.", leaveReq: updateLeaveRequests })
+    }
+    catch (e) {
+        console.log(e.message)
+        res.status(500).json({ data: "Server error while approving leave requests." })
+    }
+}
+
 //Create ClassRoom 
 export const createClassroom = async (req, res) => {
     try {
+        const adminId = req.user.id
+        if (!adminId) {
+            return res.status(400).json({ data: 'AdminId is requried.' })
+        }
         const { standard, section, classTeacher, subject } = req.body;
 
         if (!standard || !section) {
@@ -144,6 +210,10 @@ export const createClassroom = async (req, res) => {
 //Get Classroom
 export const getAllClassroom = async (req, res) => {
     try {
+        const adminId = req.user.id
+        if (!adminId) {
+            return res.status(400).json({ data: 'AdminId is requried.' })
+        }
         let classes = await classroom.find()
             .populate('classTeacher', 'name email')
             .lean();
@@ -176,6 +246,10 @@ export const getAllClassroom = async (req, res) => {
 //Get Classroom by ID
 export const getClassroomById = async (req, res) => {
     try {
+        const adminId = req.user.id
+        if (!adminId) {
+            return res.status(400).json({ data: 'AdminId is requried.' })
+        }
         let classroomData = await classroom.findById(req.params.id)
             .populate('classTeacher', 'name email')
             .lean();
@@ -211,6 +285,10 @@ export const getClassroomById = async (req, res) => {
 // Create Student Credentials
 export const createStudent = async (req, res) => {
     try {
+        const adminId = req.user.id
+        if (!adminId) {
+            return res.status(400).json({ data: 'AdminId is requried.' })
+        }
         const { name, email, password, phoneNumber, rollNo, classId, dob, guardianName, address } = req.body
         if (!name || !email || !password || !phoneNumber || !rollNo || !classId || !dob || !guardianName || !address) {
             return res.status(400).json({ data: 'All fields are required.' })
@@ -268,6 +346,10 @@ export const createStudent = async (req, res) => {
 //View All Student Information
 export const getAllStudents = async (req, res) => {
     try {
+        const adminId = req.user.id
+        if (!adminId) {
+            return res.status(400).json({ data: 'AdminId is requried.' })
+        }
         const getStudents = await student.find().populate('student', '-password -role')
         console.log(getStudents)
         return res.status(200).json({ data: 'Fetched all the student information', getStudents })
@@ -281,6 +363,10 @@ export const getAllStudents = async (req, res) => {
 //View Student by ID
 export const getStudentById = async (req, res) => {
     try {
+        const adminId = req.user.id
+        if (!adminId) {
+            return res.status(400).json({ data: 'AdminId is requried.' })
+        }
         const studentProfile = await student.findById(req.params.id).populate('student', '-password -role')
         console.log(studentProfile)
         if (!studentProfile) {
@@ -297,6 +383,10 @@ export const getStudentById = async (req, res) => {
 //Update Specific Student Details 
 export const updateStudent = async (req, res) => {
     try {
+        const adminId = req.user.id
+        if (!adminId) {
+            return res.status(400).json({ data: 'AdminId is requried.' })
+        }
         const { rollNo, classId, dob, guardianName, address } = req.body
         let updateData = {}
         if (rollNo) updateData.rollNo = rollNo
@@ -319,6 +409,10 @@ export const updateStudent = async (req, res) => {
 //Delete Specific Student Details
 export const deleteStudent = async (req, res) => {
     try {
+        const adminId = req.user.id
+        if (!adminId) {
+            return res.status(400).json({ data: 'AdminId is requried.' })
+        }
         const delStudent = await student.findById(req.params.id)
         if (!delStudent) {
             return res.status(404).json({ data: 'Student not found' })
@@ -339,10 +433,14 @@ export const deleteStudent = async (req, res) => {
 //Upload Excel of Students
 export const uploadStudentsExcel = async (req, res) => {
     try {
+        const adminId = req.user.id
+        if (!adminId) {
+            return res.status(400).json({ data: 'AdminId is requried.' })
+        }
         if (!req.file) {
             return res.status(400).json({ data: "No file uploaded." })
         }
-        
+
         const filePath = path.resolve(req.file.path)
         console.log(filePath)
 
