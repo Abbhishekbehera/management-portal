@@ -116,7 +116,7 @@ export const updateTeacherById = async (req, res) => {
 }
 
 //Admin Management -> View Leave Requests for teachers
-export const viewLeaveRequests = async (req, res) => {
+export const viewLeaveRequestsTeacher = async (req, res) => {
     try {
         // const adminId = req.user.id
         // if (!adminId) {
@@ -137,7 +137,7 @@ export const viewLeaveRequests = async (req, res) => {
 }
 
 //Admin Management -> Approve Leave Requests for teachers
-export const approveRequests = async (req, res) => {
+export const approveRequestsTeacher = async (req, res) => {
     try {
         // const adminId = req.user.id
         // if (!adminId) {

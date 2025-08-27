@@ -33,9 +33,9 @@ teacherRouter.get('/class/studentattendance', authMiddleware, authorizeRoles('te
 
 teacherRouter.post('/leave', authMiddleware, authorizeRoles('teacher'), applyLeave)
 
-teacherRouter.get('/class/studentattendance', viewLeaveRequests)
+teacherRouter.get('/class/leave/view', viewLeaveRequests)
 
-teacherRouter.put('/class/studentattendance/:id', approveRequests)
+teacherRouter.put('/class/leave/view/:id', approveRequests)
 
 
 export default teacherRouter

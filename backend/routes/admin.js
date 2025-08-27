@@ -15,7 +15,9 @@ import {
     viewAllTeacher,
     viewTeacherById,
     updateTeacherById,
-    uploadStudentsExcel
+    uploadStudentsExcel,
+    viewLeaveRequestsTeacher,
+    approveRequestsTeacher
 } from '../controllers/adminController.js'
 import { approveRequests, viewLeaveRequests } from '../controllers/teacherController.js'
 
@@ -30,9 +32,9 @@ adminRouter.get('/teachers/:id', authMiddleware, authorizeRoles('admin'), viewTe
 
 adminRouter.put('/teachers/:id', authMiddleware, authorizeRoles('admin'), updateTeacherById)
 
-adminRouter.get('/class/studentattendance', viewLeaveRequests)
+adminRouter.get('/class/teachers/leave', viewLeaveRequestsTeacher)
 
-adminRouter.put('/class/studentattendance/:id', approveRequests)
+adminRouter.put('/class/teachers/leave/:id', approveRequestsTeacher)
 
 //ClassRoom Management
 adminRouter.post('/classrooms', authMiddleware, authorizeRoles('admin'), createClassroom)
